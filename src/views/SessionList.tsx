@@ -4,6 +4,8 @@ import { api } from '../lib/api';
 import type { ProjectSummary, SearchResult, SessionSummary } from '../lib/types';
 import { formatCompactNumber, formatDate, formatNumber, formatRateLimitLabel, formatUsd, shortPath, sumTokens } from '../lib/format';
 import { UsageBanner } from '../components/UsageBanner';
+import { KeywordCloud } from '../components/KeywordCloud';
+import { keywordsFromSummaries } from '../lib/keywords';
 
 export function SessionList() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -44,6 +46,12 @@ export function SessionList() {
   const filtered = useMemo(() => (
     project === 'all' ? sessions : sessions.filter((session) => session.cwd === project)
   ), [project, sessions]);
+  const keywords = useMemo(() => keywordsFromSummaries(sessions), [sessions]);
+
+  function searchKeyword(keyword: string) {
+    setQuery(keyword);
+    setSearchResults([]);
+  }
 
   async function refreshPricing() {
     setRefreshingPricing(true);
@@ -80,6 +88,7 @@ export function SessionList() {
 
       <section className="min-w-0">
         <UsageBanner sessions={sessions} />
+        <KeywordCloud keywords={keywords} onSelect={searchKeyword} />
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold">Sessions</h1>

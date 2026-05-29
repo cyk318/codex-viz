@@ -25,3 +25,37 @@ pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+@keyframes keyword-rain {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, var(--kw-start-y, -44px), 0) rotate(var(--kw-rotate, 0deg));
+  }
+  8% {
+    opacity: var(--kw-opacity, 1);
+  }
+  33% {
+    transform: translate3d(calc(var(--kw-drift, 0px) * 0.45), 24px, 0) rotate(calc(var(--kw-rotate, 0deg) * -0.25));
+  }
+  66% {
+    transform: translate3d(var(--kw-drift, 0px), 92px, 0) rotate(calc(var(--kw-rotate, 0deg) * 0.35));
+  }
+  92% {
+    opacity: var(--kw-opacity, 1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(var(--kw-drift, 0px) * -0.35), var(--kw-end-y, 166px), 0) rotate(var(--kw-rotate, 0deg));
+  }
+}
+
+.keyword-rain {
+  animation-name: keyword-rain;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  top: 0;
+  opacity: 0;
+  transform: translate3d(0, var(--kw-start-y, -76px), 0) rotate(var(--kw-rotate, 0deg));
+  will-change: transform, opacity;
+}
