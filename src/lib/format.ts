@@ -25,7 +25,7 @@ export function formatCompactNumber(value: number | null | undefined) {
 }
 
 export function formatUsd(value: number | null | undefined) {
-  if (value == null) return 'cost n/a';
+  if (value == null) return '费用未知';
   if (value > 0 && value < 0.01) return '<$0.01';
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
@@ -64,8 +64,8 @@ export function formatRateLimitLabel(rateLimits: CodexRateLimits | null | undefi
   const primary = remainingPercent(rateLimits.primary?.used_percent);
   const secondary = remainingPercent(rateLimits.secondary?.used_percent);
   const parts = [];
-  if (primary != null) parts.push(`5h ${primary}% left`);
-  if (secondary != null) parts.push(`Weekly ${secondary}% left`);
+  if (primary != null) parts.push(`5h 剩余 ${primary}%`);
+  if (secondary != null) parts.push(`Weekly 剩余 ${secondary}%`);
   return parts.length ? parts.join(' · ') : '-';
 }
 

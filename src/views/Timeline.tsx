@@ -39,11 +39,11 @@ export function Timeline({ session }: { session: SessionDetail }) {
   return (
     <div className="grid gap-3">
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
-        <button className="rounded bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800" onClick={() => virtualizer.scrollToIndex(0)}>Top</button>
-        <button className="rounded bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800" onClick={() => virtualizer.scrollToIndex(items.length - 1)}>Bottom</button>
-        <button className="rounded bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800" onClick={() => scrollToTool(0)}>Next tool</button>
+        <button className="rounded bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800" onClick={() => virtualizer.scrollToIndex(0)}>顶部</button>
+        <button className="rounded bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800" onClick={() => virtualizer.scrollToIndex(items.length - 1)}>底部</button>
+        <button className="rounded bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800" onClick={() => scrollToTool(0)}>下一个工具</button>
         <select className="h-8 rounded border border-slate-300 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={turnOnly} onChange={(event) => setTurnOnly(event.target.value)}>
-          <option value="all">All turns</option>
+          <option value="all">全部 turns</option>
           {session.turns.map((turn) => <option key={turn.id} value={turn.id}>{turn.title}</option>)}
         </select>
       </div>

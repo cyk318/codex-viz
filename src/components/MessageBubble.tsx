@@ -24,7 +24,7 @@ export function ReasoningBubble({ item }: { item: ParsedReasoning }) {
         Reasoning event · {formatDate(item.timestamp)}
       </summary>
       <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-        {item.summaryText || (item.hasEncryptedContent ? 'Encrypted reasoning content is present.' : 'No readable summary.')}
+        {item.summaryText || (item.hasEncryptedContent ? '存在加密 reasoning 内容。' : '没有可读摘要。')}
       </div>
     </details>
   );

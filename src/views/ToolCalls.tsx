@@ -16,12 +16,12 @@ export function ToolCalls({ calls }: { calls: ParsedToolCall[] }) {
         </select>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={errorsOnly} onChange={(event) => setErrorsOnly(event.target.checked)} />
-          Errors only
+          仅错误
         </label>
-        <span className="text-sm text-slate-500">{filtered.length} calls</span>
+        <span className="text-sm text-slate-500">{filtered.length} 次调用</span>
       </div>
       {filtered.map((call) => <ToolCallCard key={call.callId} call={call} />)}
-      {!filtered.length ? <div className="rounded border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">No tool calls.</div> : null}
+      {!filtered.length ? <div className="rounded border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">没有工具调用。</div> : null}
     </div>
   );
 }

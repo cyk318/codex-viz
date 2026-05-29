@@ -9,6 +9,7 @@ const server = Bun.serve({
   development: process.env.NODE_ENV !== 'production',
   routes: {
     '/': index,
+    '/stats': index,
     '/sessions/:id': index,
     '/api/*': (req) => handleApi(req)
   },

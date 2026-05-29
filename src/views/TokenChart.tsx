@@ -23,22 +23,22 @@ export function TokenChart({ session }: { session: SessionDetail }) {
           ['Cached', last.cached_input_tokens],
           ['Output', last.output_tokens],
           ['Reasoning', last.reasoning_output_tokens],
-          ['Total', sumTokens(last)],
-          ['Remaining', session.remainingTokens],
-          ['Cost', session.estimatedCostUsd]
+          ['总计', sumTokens(last)],
+          ['上下文剩余', session.remainingTokens],
+          ['费用', session.estimatedCostUsd]
         ].map(([label, value]) => (
           <div key={label} className="rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
             <div className="text-xs text-slate-500">{label}</div>
             <div className="mt-1 text-lg font-semibold" title={value == null ? '' : formatNumber(Number(value))}>
-              {label === 'Cost' ? formatUsd(value as number | null) : label === 'Remaining' ? formatCompactNumber(value as number | null) : formatNumber(Number(value || 0))}
+              {label === '费用' ? formatUsd(value as number | null) : label === '上下文剩余' ? formatCompactNumber(value as number | null) : formatNumber(Number(value || 0))}
             </div>
           </div>
         ))}
       </div>
       <div className="rounded border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-900">
-        <span className="font-semibold">Rate limits:</span> {formatRateLimitLabel(session.rateLimits)}
+        <span className="font-semibold">额度限制：</span> {formatRateLimitLabel(session.rateLimits)}
       </div>
-      <Chart title="Cumulative tokens">
+      <Chart title="累计 Tokens">
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="index" />
@@ -51,7 +51,7 @@ export function TokenChart({ session }: { session: SessionDetail }) {
           <Line type="monotone" dataKey="reasoning" stroke="#dc2626" dot={false} />
         </LineChart>
       </Chart>
-      <Chart title="Incremental tokens">
+      <Chart title="增量 Tokens">
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="index" />
@@ -60,7 +60,7 @@ export function TokenChart({ session }: { session: SessionDetail }) {
           <Bar dataKey="last" fill="#2563eb" />
         </BarChart>
       </Chart>
-      <Chart title="Context window usage">
+      <Chart title="上下文窗口占用">
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="index" />

@@ -199,7 +199,7 @@ function parseEntries(filePath: string, entries: RawEntry[], warnings: ParseWarn
           timestamp,
           turnId: currentTurnId,
           hasEncryptedContent: typeof item.encrypted_content === 'string',
-          summaryText: contentText(item.summary)
+          summaryText: reasoningSummaryText(item.summary)
         });
       }
 
@@ -344,7 +344,7 @@ function buildGraph(turns: ParsedTurn[], messages: ParsedMessage[], toolCalls: P
     nodes.push({
       id: outputId,
       type: 'output',
-      label: excerpt(call.output || 'No output', 50),
+      label: excerpt(call.output || '无输出', 50),
       timestamp: call.outputTimestamp || call.timestamp,
       refId: call.callId
     });
@@ -360,6 +360,18 @@ function contentText(value: unknown): string {
     const item = asRecord(block);
     if (typeof item.text === 'string') return item.text;
     if (typeof item.content === 'string') return item.content;
+    return '';
+  }).filter(Boolean).join('\n');
+}
+
+function reasoningSummaryText(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  return value.map((block) => {
+    const item = asRecord(block);
+    if (typeof item.text === 'string') return item.text;
+    if (typeof item.content === 'string') return item.content;
+    if (Array.isArray(item.content)) return contentText(item.content);
+    if (typeof item.summary === 'string') return item.summary;
     return '';
   }).filter(Boolean).join('\n');
 }
