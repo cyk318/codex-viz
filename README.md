@@ -2,7 +2,7 @@
 
 致敬鼻祖版本：[cc-viz](https://github.com/guxingke/cc-viz)。
 
-Codex Viz 是一个纯本地的 Codex session 可视化工具，用于读取并回放本机 `~/.codex/sessions/` 下的 JSONL 日志。
+Codex Viz 是一个纯本地的 Codex session 可视化工具，用于读取并回放本机 Codex sessions 目录下的 JSONL 日志。
 
 ## 运行
 
@@ -21,6 +21,41 @@ http://localhost:3456
 
 - `PORT=3457`：使用其他端口
 - `OPEN_BROWSER=0`：启动后不自动打开浏览器
+- `CODEX_SESSIONS_DIR=/path/to/sessions`：显式指定 Codex sessions 目录
+- `CODEX_HOME=/path/to/.codex`：显式指定 Codex home，sessions 将读取自 `$CODEX_HOME/sessions`
+
+默认 sessions 目录解析顺序：
+
+1. `CODEX_SESSIONS_DIR`
+2. `$CODEX_HOME/sessions`
+3. 当前系统用户目录下的 `.codex/sessions`
+
+Windows 示例：
+
+```powershell
+$env:CODEX_SESSIONS_DIR="$env:USERPROFILE\.codex\sessions"
+bun run dev
+```
+
+上面的示例适用于 PowerShell：
+
+- `$env:USERPROFILE` 是当前 Windows 用户目录，例如 `C:\Users\zhangsan`
+- `$env:USERPROFILE\.codex\sessions` 通常等价于 `C:\Users\zhangsan\.codex\sessions`
+- 这行环境变量只在当前 PowerShell 窗口生效，关闭窗口后会失效
+
+如果 Codex sessions 不在默认目录，可以直接写完整路径：
+
+```powershell
+$env:CODEX_SESSIONS_DIR="D:\codex-data\sessions"
+bun run dev
+```
+
+如果使用 CMD，而不是 PowerShell，写法是：
+
+```cmd
+set CODEX_SESSIONS_DIR=%USERPROFILE%\.codex\sessions
+bun run dev
+```
 
 ## 后台运行
 
@@ -60,7 +95,7 @@ bun run stop:bg
 
 ## 数据安全
 
-- 只读取本机 `~/.codex/sessions/` 下的 JSONL 文件。
+- 只读取本机 Codex sessions 目录下的 JSONL 文件。
 - 不写入、不修改、不删除任何 `~/.codex` 原始数据。
 - 不上传 session 内容，不包含多用户、鉴权或远程部署能力。
 

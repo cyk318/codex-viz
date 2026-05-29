@@ -1,14 +1,25 @@
-import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { readdir } from 'node:fs/promises';
 import type { SessionSummary } from '../lib/types';
 import { parseSessionFile } from './cache';
 
-export const CODEX_SESSIONS_DIR = join(Bun.env.HOME || '', '.codex', 'sessions');
+export function resolveCodexSessionsDir(env = Bun.env) {
+  if (env.CODEX_SESSIONS_DIR) {
+    return resolve(env.CODEX_SESSIONS_DIR);
+  }
+  if (env.CODEX_HOME) {
+    return join(resolve(env.CODEX_HOME), 'sessions');
+  }
+  return join(homedir(), '.codex', 'sessions');
+}
+
+export const CODEX_SESSIONS_DIR = resolveCodexSessionsDir();
 
 export async function assertCodexSessionsDir() {
   const stat = await Bun.file(CODEX_SESSIONS_DIR).stat().catch(() => null);
   if (!stat?.isDirectory()) {
-    throw new Error(`Codex sessions directory not found: ${CODEX_SESSIONS_DIR}`);
+    throw new Error(`Codex sessions directory not found: ${CODEX_SESSIONS_DIR}. Set CODEX_SESSIONS_DIR to the folder that contains Codex JSONL session files.`);
   }
 }
 

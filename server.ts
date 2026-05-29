@@ -25,13 +25,14 @@ const server = Bun.serve({
 console.log(`Codex Viz running at http://localhost:${server.port}`);
 
 if (process.env.OPEN_BROWSER !== '0') {
+  const url = `http://localhost:${server.port}`;
   const opener = process.platform === 'darwin'
-    ? 'open'
+    ? ['open', url]
     : process.platform === 'win32'
-      ? 'start'
-      : 'xdg-open';
+      ? ['cmd', '/c', 'start', '', url]
+      : ['xdg-open', url];
   try {
-    Bun.spawn([opener, `http://localhost:${server.port}`]);
+    Bun.spawn(opener);
   } catch {
     // Browser auto-open is best effort only.
   }
