@@ -1,0 +1,1 @@
+# Bun serves src/index.html directly. Tailwind is processed from src/styles.css.
