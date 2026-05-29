@@ -49,7 +49,7 @@ export function SessionDetail() {
         {tabs.map((tab) => (
           <button
             key={tab}
-            className={`rounded px-3 py-1.5 text-sm ${active === tab ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 dark:bg-slate-900 dark:text-slate-200'}`}
+            className={`rounded px-3 py-1.5 text-sm ${active === tab ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 dark:bg-slate-900 dark:text-slate-300'}`}
             onClick={() => setParams({ tab })}
           >
             {tabLabels[tab]}

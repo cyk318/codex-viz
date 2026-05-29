@@ -1,5 +1,6 @@
 import type { ParsedMessage, ParsedReasoning, SessionDetail } from '../lib/types';
 import { formatDate } from '../lib/format';
+import { MarkdownContent } from '../components/MarkdownContent';
 
 type ConversationItem =
   | { type: 'message'; timestamp: string; entryIndex: number; item: ParsedMessage }
@@ -45,7 +46,7 @@ function ConversationMessage({ message }: { message: ParsedMessage }) {
         {message.phase ? <span>{message.phase}</span> : null}
         <span>{formatDate(message.timestamp)}</span>
       </div>
-      <div className="whitespace-pre-wrap break-words text-sm leading-6">{message.text}</div>
+      <MarkdownContent text={message.text} />
     </article>
   );
 }
@@ -57,7 +58,7 @@ function ConversationReasoning({ item }: { item: ParsedReasoning }) {
         <span>assistant 思考</span>
         <span className="font-normal text-slate-500">{formatDate(item.timestamp)}</span>
       </div>
-      <div className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-200">{item.summaryText}</div>
+      <MarkdownContent className="text-slate-700 dark:text-slate-300" text={item.summaryText} />
     </article>
   );
 }

@@ -10,7 +10,7 @@ import { UsageStats } from './views/UsageStats';
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100">
+      <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-300">
         <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
           <div className="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-3">
             <NavLink to="/" className="text-base font-semibold">Codex Viz</NavLink>

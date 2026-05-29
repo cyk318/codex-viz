@@ -10,7 +10,7 @@ export function ToolCallCard({ call, compact = false }: { call: ParsedToolCall; 
     <details className={`rounded border p-3 ${tone}`} open={!compact && call.status === 'error'}>
       <summary className="cursor-pointer list-none">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-semibold text-slate-900 dark:text-slate-100">{call.name}</span>
+          <span className="font-semibold text-slate-900 dark:text-slate-300">{call.name}</span>
           <span className="rounded bg-slate-100 px-2 py-0.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{call.status}</span>
           <span className="text-slate-500">{formatDate(call.timestamp)}</span>
           <span className="text-slate-500">{formatDuration(call.durationMs)}</span>

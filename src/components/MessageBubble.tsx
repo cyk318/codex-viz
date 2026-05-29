@@ -1,5 +1,6 @@
 import type { ParsedMessage, ParsedReasoning } from '../lib/types';
 import { formatDate } from '../lib/format';
+import { MarkdownContent } from './MarkdownContent';
 
 export function MessageBubble({ message }: { message: ParsedMessage }) {
   return (
@@ -12,7 +13,7 @@ export function MessageBubble({ message }: { message: ParsedMessage }) {
           <span>turn {message.turnId?.slice(0, 8) || '-'}</span>
         </div>
       </summary>
-      <div className="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{message.text}</div>
+      <MarkdownContent className="mt-2" text={message.text} />
     </details>
   );
 }
@@ -23,9 +24,10 @@ export function ReasoningBubble({ item }: { item: ParsedReasoning }) {
       <summary className="cursor-pointer text-xs font-semibold text-slate-600 dark:text-slate-300">
         Reasoning event · {formatDate(item.timestamp)}
       </summary>
-      <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-        {item.summaryText || (item.hasEncryptedContent ? '存在加密 reasoning 内容。' : '没有可读摘要。')}
-      </div>
+      <MarkdownContent
+        className="mt-2 text-slate-600 dark:text-slate-300"
+        text={item.summaryText || (item.hasEncryptedContent ? '存在加密 reasoning 内容。' : '没有可读摘要。')}
+      />
     </details>
   );
 }
