@@ -1,5 +1,7 @@
 # Codex Viz
 
+致敬鼻祖版本：[cc-viz](https://github.com/guxingke/cc-viz)。
+
 Codex Viz 是一个纯本地的 Codex session 可视化工具，用于读取并回放本机 `~/.codex/sessions/` 下的 JSONL 日志。
 
 ## 运行
