@@ -19,6 +19,8 @@ build/
 .env
 .env.*
 !.env.example
+.codex-viz.pid
+.codex-viz.log
 
 # OS and editor files
 .DS_Store

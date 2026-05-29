@@ -22,6 +22,28 @@ http://localhost:3456
 - `PORT=3457`：使用其他端口
 - `OPEN_BROWSER=0`：启动后不自动打开浏览器
 
+## 后台运行
+
+如果不想占用一个终端窗口，可以使用后台启动脚本：
+
+```bash
+bun run start:b
+```
+
+脚本会：
+
+- 生成最新 CSS
+- 后台启动本地服务
+- 写入 `.codex-viz.pid`
+- 日志写入 `.codex-viz.log`
+- 自动打开浏览器访问页面
+
+停止后台服务：
+
+```bash
+bun run stop:bg
+```
+
 ## 功能
 
 - 按工作目录聚合 Codex sessions。
