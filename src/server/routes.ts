@@ -1,3 +1,4 @@
+import { unlink } from 'node:fs/promises';
 import type { ProjectSummary, SearchResult } from '../lib/types';
 import { excerpt, sumTokens } from '../lib/format';
 import { clearSessionCache, parseSessionFile } from './cache';
@@ -37,6 +38,11 @@ export async function handleApi(req: Request): Promise<Response> {
       const id = decodeURIComponent(detailMatch[1]);
       const filePath = await findSessionFileById(id);
       if (!filePath) return json({ error: 'Session not found' }, 404);
+      if (req.method === 'DELETE') {
+        await unlink(filePath);
+        clearSessionCache();
+        return json({ ok: true });
+      }
       return json(await parseSessionFile(filePath, true));
     }
     return json({ error: 'Not found' }, 404);

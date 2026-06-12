@@ -13,6 +13,13 @@ export const api = {
   projects: () => getJson<ProjectSummary[]>('/api/projects'),
   sessions: () => getJson<SessionSummary[]>('/api/sessions'),
   session: (id: string) => getJson<SessionDetail>(`/api/sessions/${encodeURIComponent(id)}`),
+  deleteSession: (id: string) => fetch(`/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }).then(async (res) => {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  }),
   raw: (id: string) => fetch(`/api/sessions/${encodeURIComponent(id)}/raw`).then((res) => res.text()),
   search: (q: string) => getJson<SearchResult[]>(`/api/search?q=${encodeURIComponent(q)}`),
   refreshPricing: () => fetch('/api/pricing/refresh', { method: 'POST' }).then(async (res) => {

@@ -15,6 +15,8 @@ export function SessionList() {
   const [pricingStatus, setPricingStatus] = useState<string>('内置价格表');
   const [refreshingPricing, setRefreshingPricing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
+  const [deletedTitle, setDeletedTitle] = useState<string | null>(null);
 
   function loadData() {
     return Promise.all([api.sessions(), api.projects()])
@@ -61,6 +63,35 @@ export function SessionList() {
     }
   }
 
+  async function copySessionId(sessionId: string) {
+    try {
+      await navigator.clipboard.writeText(`codex resume ${sessionId}`);
+      setCopiedSessionId(sessionId);
+      window.setTimeout(() => {
+        setCopiedSessionId((current) => (current === sessionId ? null : current));
+      }, 1200);
+    } catch (err) {
+      setError((err as Error).message || '复制 sessionId 失败');
+    }
+  }
+
+  async function deleteSession(session: SessionSummary) {
+    const confirmed = window.confirm(`确定要删除这个 session 吗？\n\n${session.title}\n${session.id}\n\n删除后将移除本地 JSONL 文件，无法在此页面恢复。`);
+    if (!confirmed) return;
+    setError(null);
+    try {
+      await api.deleteSession(session.id);
+      setDeletedTitle(session.title);
+      setSearchResults((results) => results.filter((result) => result.sessionId !== session.id));
+      await loadData();
+      window.setTimeout(() => {
+        setDeletedTitle((current) => (current === session.title ? null : current));
+      }, 2000);
+    } catch (err) {
+      setError((err as Error).message || '删除 session 失败');
+    }
+  }
+
   return (
     <main className="mx-auto grid max-w-[1500px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)]">
       <aside className="rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -80,6 +111,16 @@ export function SessionList() {
 
       <section className="min-w-0">
         <UsageBanner sessions={sessions} />
+        {copiedSessionId ? (
+          <div className="mb-3 rounded border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+            已复制，可直接运行：codex resume {copiedSessionId}
+          </div>
+        ) : null}
+        {deletedTitle ? (
+          <div className="mb-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            已删除 session：{deletedTitle}
+          </div>
+        ) : null}
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold">Sessions</h1>
@@ -120,30 +161,51 @@ export function SessionList() {
         ) : null}
 
         <div className="overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-          <div className="grid grid-cols-[minmax(260px,1fr)_110px_110px_120px_120px] gap-3 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800 max-lg:hidden">
+          <div className="grid grid-cols-[minmax(260px,1fr)_110px_110px_120px_120px_156px] gap-3 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800 max-lg:hidden">
             <div>标题</div>
             <div>Turns</div>
             <div>工具</div>
             <div>Tokens</div>
             <div>开始时间</div>
+            <div>操作</div>
           </div>
           {filtered.map((session) => (
-            <Link key={session.id} to={`/sessions/${session.id}`} className="grid gap-2 border-b border-slate-100 px-3 py-3 text-sm hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 lg:grid-cols-[minmax(260px,1fr)_110px_110px_120px_120px] lg:gap-3">
-              <div className="min-w-0">
-                <div className="truncate font-medium">{session.title}</div>
-                <div className="truncate text-xs text-slate-500">{shortPath(session.cwd)} · {session.model || '-'} · {session.gitBranch || '-'}</div>
-                <div className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-                  {formatRateLimitLabel(session.rateLimits)}
+            <div key={session.id} className="grid gap-2 border-b border-slate-100 px-3 py-3 text-sm hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 lg:grid-cols-[minmax(260px,1fr)_110px_110px_120px_120px_156px] lg:gap-3">
+              <Link to={`/sessions/${session.id}`} className="contents">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{session.title}</div>
+                  <div className="truncate text-xs text-slate-500">{shortPath(session.cwd)} · {session.model || '-'} · {session.gitBranch || '-'}</div>
+                  <div className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+                    {formatRateLimitLabel(session.rateLimits)}
+                  </div>
                 </div>
+                <div className="self-center">{session.turnCount}</div>
+                <div className="self-center">{session.toolCallCount}</div>
+                <div className="self-center" title={`${formatNumber(sumTokens(session.totalTokens))} tokens，预估 ${formatUsd(session.estimatedCostUsd)}`}>
+                  <div>{formatCompactNumber(sumTokens(session.totalTokens))}</div>
+                  <div className="text-xs text-slate-500">{formatUsd(session.estimatedCostUsd)}</div>
+                </div>
+                <div className="self-center">{formatDate(session.startedAt)}</div>
+              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  className="h-8 rounded border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:bg-blue-950 dark:hover:text-blue-200"
+                  type="button"
+                  onClick={() => copySessionId(session.id)}
+                  title={copiedSessionId === session.id ? '已复制' : `复制 codex resume ${session.id}`}
+                >
+                  {copiedSessionId === session.id ? '已复制' : '复制id'}
+                </button>
+                <button
+                  className="h-8 rounded border border-red-200 px-3 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 dark:border-red-900 dark:text-red-200 dark:hover:border-red-700 dark:hover:bg-red-950/40"
+                  type="button"
+                  onClick={() => deleteSession(session)}
+                  title={`删除 ${session.id}`}
+                >
+                  删除
+                </button>
               </div>
-              <div className="self-center">{session.turnCount}</div>
-              <div className="self-center">{session.toolCallCount}</div>
-              <div className="self-center" title={`${formatNumber(sumTokens(session.totalTokens))} tokens，预估 ${formatUsd(session.estimatedCostUsd)}`}>
-                <div>{formatCompactNumber(sumTokens(session.totalTokens))}</div>
-                <div className="text-xs text-slate-500">{formatUsd(session.estimatedCostUsd)}</div>
-              </div>
-              <div className="self-center">{formatDate(session.startedAt)}</div>
-            </Link>
+            </div>
           ))}
           {!loading && filtered.length === 0 ? <div className="p-8 text-center text-sm text-slate-500">没有找到 sessions。</div> : null}
         </div>
