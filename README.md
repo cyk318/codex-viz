@@ -62,7 +62,7 @@ bun run dev
 如果不想占用一个终端窗口，可以使用后台启动脚本：
 
 ```bash
-bun run start:b
+bun run start:bg
 ```
 
 脚本会：
