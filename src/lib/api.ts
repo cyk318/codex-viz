@@ -1,4 +1,4 @@
-import type { ProjectSummary, SearchResult, SessionDetail, SessionSummary } from './types';
+import type { ProjectSummary, SearchResult, SessionCleanupResult, SessionDetail, SessionSummary } from './types';
 
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(path);
@@ -19,6 +19,13 @@ export const api = {
       throw new Error(body.error || `${res.status} ${res.statusText}`);
     }
     return res.json();
+  }),
+  cleanupSessions: () => fetch('/api/sessions/cleanup', { method: 'DELETE' }).then(async (res) => {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `${res.status} ${res.statusText}`);
+    }
+    return res.json() as Promise<SessionCleanupResult>;
   }),
   raw: (id: string) => fetch(`/api/sessions/${encodeURIComponent(id)}/raw`).then((res) => res.text()),
   search: (q: string) => getJson<SearchResult[]>(`/api/search?q=${encodeURIComponent(q)}`),

@@ -185,3 +185,8 @@ export type SearchResult = {
     excerpt: string;
   }>;
 };
+
+export type SessionCleanupResult = {
+  deletedCount: number;
+  cutoff: string;
+};

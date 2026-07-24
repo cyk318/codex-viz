@@ -25,6 +25,9 @@ export async function handleApi(req: Request): Promise<Response> {
       clearSessionCache();
       return json(snapshot);
     }
+    if (url.pathname === '/api/sessions/cleanup' && req.method === 'DELETE') {
+      return json(await cleanupExpiredSessions());
+    }
     const rawMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/raw$/);
     if (rawMatch) {
       const filePath = await findSessionFileById(decodeURIComponent(rawMatch[1]));
@@ -50,6 +53,25 @@ export async function handleApi(req: Request): Promise<Response> {
     console.error(err);
     return json({ error: (err as Error).message }, 500);
   }
+}
+
+async function cleanupExpiredSessions() {
+  const cutoffTime = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const sessions = await getSessionSummaries();
+  const expiredSessions = sessions.filter((session) => {
+    const endedAt = Date.parse(session.endedAt);
+    return Number.isFinite(endedAt) && endedAt < cutoffTime;
+  });
+
+  for (const session of expiredSessions) {
+    await unlink(session.filePath);
+  }
+  clearSessionCache();
+
+  return {
+    deletedCount: expiredSessions.length,
+    cutoff: new Date(cutoffTime).toISOString()
+  };
 }
 
 async function projects(): Promise<ProjectSummary[]> {
