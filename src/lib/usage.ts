@@ -34,7 +34,7 @@ export function lastThirtyDaysUsage(sessions: SessionSummary[]): DailyUsage[] {
     const day = byDate.get(key);
     if (!day) continue;
     day.tokens += sumTokens(session.totalTokens);
-    day.cost += session.estimatedCostUsd ?? 0;
+    day.cost += session.estimatedCostCny ?? 0;
     day.sessions += 1;
   }
 
@@ -45,7 +45,7 @@ export function summarizeSessions(sessions: SessionSummary[]) {
   return sessions.reduce(
     (acc, session) => {
       acc.tokens += sumTokens(session.totalTokens);
-      acc.cost += session.estimatedCostUsd ?? 0;
+      acc.cost += session.estimatedCostCny ?? 0;
       acc.sessions += 1;
       return acc;
     },

@@ -24,12 +24,12 @@ export function formatCompactNumber(value: number | null | undefined) {
   }).format(value);
 }
 
-export function formatUsd(value: number | null | undefined) {
+export function formatCny(value: number | null | undefined) {
   if (value == null) return '费用未知';
-  if (value > 0 && value < 0.01) return '<$0.01';
-  return new Intl.NumberFormat(undefined, {
+  if (value > 0 && value < 0.01) return '<¥0.01';
+  return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'CNY',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value);

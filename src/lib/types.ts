@@ -146,12 +146,26 @@ export type SessionSummary = {
   contextWindow: number | null;
   remainingTokens: number | null;
   rateLimits: CodexRateLimits | null;
-  estimatedCostUsd: number | null;
+  estimatedCostCny: number | null;
   model: string | null;
   cliVersion: string | null;
   gitBranch: string | null;
   hasPatch: boolean;
   hasErrors: boolean;
+};
+
+export type ModelPricing = {
+  input: number;
+  output: number;
+  cached_input?: number;
+};
+
+export type PricingSnapshot = {
+  source: 'built-in' | 'official';
+  updatedAt: string | null;
+  models: Record<string, ModelPricing>;
+  warnings: string[];
+  usdToCnyRate: number;
 };
 
 export type SessionDetail = SessionSummary & {

@@ -1,4 +1,4 @@
-import type { ProjectSummary, SearchResult, SessionCleanupResult, SessionDetail, SessionSummary } from './types';
+import type { PricingSnapshot, ProjectSummary, SearchResult, SessionCleanupResult, SessionDetail, SessionSummary } from './types';
 
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(path);
@@ -29,11 +29,12 @@ export const api = {
   }),
   raw: (id: string) => fetch(`/api/sessions/${encodeURIComponent(id)}/raw`).then((res) => res.text()),
   search: (q: string) => getJson<SearchResult[]>(`/api/search?q=${encodeURIComponent(q)}`),
+  pricing: () => getJson<PricingSnapshot>('/api/pricing'),
   refreshPricing: () => fetch('/api/pricing/refresh', { method: 'POST' }).then(async (res) => {
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error || `${res.status} ${res.statusText}`);
     }
-    return res.json();
+    return res.json() as Promise<PricingSnapshot>;
   })
 };

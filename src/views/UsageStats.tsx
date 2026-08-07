@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../lib/api';
 import type { SessionSummary } from '../lib/types';
-import { formatCompactNumber, formatNumber, formatUsd } from '../lib/format';
+import { formatCny, formatCompactNumber, formatNumber } from '../lib/format';
 import { lastThirtyDaysUsage, summarizeSessions, todayUsage } from '../lib/usage';
 
 export function UsageStats() {
@@ -40,7 +40,7 @@ export function UsageStats() {
         <div className="grid gap-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Metric label="今日 Tokens" value={formatCompactNumber(today.tokens)} sub={`${today.sessions} 个 sessions`} />
-            <Metric label="今日费用" value={formatUsd(today.cost)} sub="预估 USD" />
+            <Metric label="今日费用" value={formatCny(today.cost)} sub="预估人民币" />
             <Metric label="30 天 Tokens" value={formatCompactNumber(total.tokens)} sub={`${formatNumber(total.sessions)} 个 sessions`} />
             <Metric label="峰值日期" value={formatCompactNumber(maxDay.tokens)} sub={maxDay.label} />
           </div>
@@ -59,8 +59,8 @@ export function UsageStats() {
             <LineChart data={daily}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" minTickGap={16} />
-              <YAxis tickFormatter={(value) => `$${Number(value).toFixed(0)}`} />
-              <Tooltip formatter={(value) => formatUsd(Number(value))} />
+              <YAxis tickFormatter={(value) => `¥${Number(value).toFixed(0)}`} />
+              <Tooltip formatter={(value) => formatCny(Number(value))} />
               <Legend />
               <Line type="monotone" dataKey="cost" stroke="#16a34a" strokeWidth={2} dot={false} />
             </LineChart>

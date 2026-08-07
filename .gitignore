@@ -20,6 +20,7 @@ build/
 .env.*
 !.env.example
 .codex-viz.pid
+.codex-viz.port
 .codex-viz.log
 
 # OS and editor files

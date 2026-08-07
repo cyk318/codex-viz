@@ -1,17 +1,7 @@
-import type { CodexTokenUsage } from '../lib/types';
+import type { CodexTokenUsage, ModelPricing, PricingSnapshot } from '../lib/types';
 
-export type ModelPricing = {
-  input: number;
-  output: number;
-  cached_input?: number;
-};
-
-export type PricingSnapshot = {
-  source: 'built-in' | 'official';
-  updatedAt: string | null;
-  models: Record<string, ModelPricing>;
-  warnings: string[];
-};
+const DEFAULT_USD_TO_CNY_RATE = 7.2;
+const USD_TO_CNY_RATE = readUsdToCnyRate();
 
 const BUILT_IN_PRICING: Record<string, ModelPricing> = {
   'gpt-5.5': { input: 5, cached_input: 0.5, output: 30 },
@@ -30,10 +20,11 @@ let activePricing: PricingSnapshot = {
   source: 'built-in',
   updatedAt: null,
   models: { ...BUILT_IN_PRICING },
-  warnings: []
+  warnings: [],
+  usdToCnyRate: USD_TO_CNY_RATE
 };
 
-export function calcCost(model: string | null, usage: CodexTokenUsage): number | null {
+export function calcCostCny(model: string | null, usage: CodexTokenUsage): number | null {
   const pricing = pricingForModel(model);
   if (!pricing) return null;
   const cachedTokens = usage.cached_input_tokens ?? 0;
@@ -41,7 +32,7 @@ export function calcCost(model: string | null, usage: CodexTokenUsage): number |
   const input = (uncachedInputTokens / 1_000_000) * pricing.input;
   const cached = (cachedTokens / 1_000_000) * (pricing.cached_input ?? pricing.input);
   const output = ((usage.output_tokens ?? 0) / 1_000_000) * pricing.output;
-  return input + cached + output;
+  return (input + cached + output) * USD_TO_CNY_RATE;
 }
 
 export function getPricingSnapshot() {
@@ -67,9 +58,17 @@ export async function refreshPricingFromOfficial(): Promise<PricingSnapshot> {
     source: Object.keys(parsed).length ? 'official' : 'built-in',
     updatedAt: new Date().toISOString(),
     models,
-    warnings
+    warnings,
+    usdToCnyRate: USD_TO_CNY_RATE
   };
   return activePricing;
+}
+
+function readUsdToCnyRate() {
+  const configuredRate = Number(process.env.USD_TO_CNY_RATE);
+  return Number.isFinite(configuredRate) && configuredRate > 0
+    ? configuredRate
+    : DEFAULT_USD_TO_CNY_RATE;
 }
 
 async function fetchOfficialText(url: string) {

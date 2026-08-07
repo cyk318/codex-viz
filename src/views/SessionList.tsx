@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import type { ProjectSummary, SearchResult, SessionSummary } from '../lib/types';
-import { formatCompactNumber, formatDate, formatNumber, formatRateLimitLabel, formatUsd, shortPath, sumTokens } from '../lib/format';
+import type { PricingSnapshot, ProjectSummary, SearchResult, SessionSummary } from '../lib/types';
+import { formatCny, formatCompactNumber, formatDate, formatNumber, formatRateLimitLabel, shortPath, sumTokens } from '../lib/format';
 import { UsageBanner } from '../components/UsageBanner';
 
 export function SessionList() {
@@ -12,7 +12,7 @@ export function SessionList() {
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [pricingStatus, setPricingStatus] = useState<string>('内置价格表');
+  const [pricingStatus, setPricingStatus] = useState<string>('正在读取价格表...');
   const [refreshingPricing, setRefreshingPricing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
@@ -21,10 +21,11 @@ export function SessionList() {
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
 
   function loadData() {
-    return Promise.all([api.sessions(), api.projects()])
-      .then(([sessionData, projectData]) => {
+    return Promise.all([api.sessions(), api.projects(), api.pricing()])
+      .then(([sessionData, projectData, pricing]) => {
         setSessions(sessionData);
         setProjects(projectData);
+        setPricingStatus(formatPricingStatus(pricing));
       });
   }
 
@@ -55,8 +56,7 @@ export function SessionList() {
     try {
       const snapshot = await api.refreshPricing();
       await loadData();
-      const suffix = snapshot.warnings?.length ? ` · ${snapshot.warnings.length} 条警告` : '';
-      setPricingStatus(`官方价格表 ${new Date(snapshot.updatedAt).toLocaleTimeString()}${suffix}`);
+      setPricingStatus(formatPricingStatus(snapshot));
     } catch (err) {
       setError((err as Error).message);
       setPricingStatus('价格刷新失败');
@@ -216,9 +216,9 @@ export function SessionList() {
                 </div>
                 <div className="self-center">{session.turnCount}</div>
                 <div className="self-center">{session.toolCallCount}</div>
-                <div className="self-center" title={`${formatNumber(sumTokens(session.totalTokens))} tokens，预估 ${formatUsd(session.estimatedCostUsd)}`}>
+                <div className="self-center" title={`${formatNumber(sumTokens(session.totalTokens))} tokens，预估 ${formatCny(session.estimatedCostCny)}`}>
                   <div>{formatCompactNumber(sumTokens(session.totalTokens))}</div>
-                  <div className="text-xs text-slate-500">{formatUsd(session.estimatedCostUsd)}</div>
+                  <div className="text-xs text-slate-500">{formatCny(session.estimatedCostCny)}</div>
                 </div>
                 <div className="self-center">{formatDate(session.startedAt)}</div>
               </Link>
@@ -247,4 +247,11 @@ export function SessionList() {
       </section>
     </main>
   );
+}
+
+function formatPricingStatus(snapshot: PricingSnapshot) {
+  const source = snapshot.source === 'official' ? '官方价格表' : '内置价格表';
+  const updatedAt = snapshot.updatedAt ? ` ${new Date(snapshot.updatedAt).toLocaleTimeString()}` : '';
+  const warnings = snapshot.warnings.length ? ` · ${snapshot.warnings.length} 条警告` : '';
+  return `${source}${updatedAt} · 1 USD = ¥${snapshot.usdToCnyRate.toFixed(2)}${warnings}`;
 }

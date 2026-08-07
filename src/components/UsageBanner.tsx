@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { SessionSummary } from '../lib/types';
-import { formatCompactNumber, formatUsd } from '../lib/format';
+import { formatCny, formatCompactNumber } from '../lib/format';
 import { todayUsage } from '../lib/usage';
 
 export function UsageBanner({ sessions }: { sessions: SessionSummary[] }) {
@@ -26,7 +26,7 @@ export function UsageBanner({ sessions }: { sessions: SessionSummary[] }) {
           </div>
           <div className="rounded border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
             <div className="text-xs text-slate-500">预估费用</div>
-            <div className="mt-1 text-3xl font-semibold text-slate-950 dark:text-slate-300">{formatUsd(usage.cost)}</div>
+            <div className="mt-1 text-3xl font-semibold text-slate-950 dark:text-slate-300">{formatCny(usage.cost)}</div>
           </div>
         </div>
       </div>

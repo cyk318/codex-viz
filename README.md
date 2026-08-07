@@ -59,10 +59,13 @@ bun run dev
 
 ## 后台运行
 
-如果不想占用一个终端窗口，可以使用后台启动脚本：
+如果不想占用一个终端窗口，可以使用统一管理脚本：
 
 ```bash
-bun run start:bg
+./codex-viz.sh start
+./codex-viz.sh restart
+./codex-viz.sh stop
+./codex-viz.sh status
 ```
 
 脚本会：
@@ -72,12 +75,19 @@ bun run start:bg
 - 写入 `.codex-viz.pid`
 - 日志写入 `.codex-viz.log`
 - 自动打开浏览器访问页面
+- 记录实际启动端口，`status` 会展示地址、PID 和日志路径
+- 检测重复启动和失效的 PID 文件
 
-停止后台服务：
+也可以通过 Bun scripts 使用：
 
 ```bash
-bun run stop:bg
+bun run service start
+bun run service restart
+bun run service stop
+bun run service status
 ```
+
+原有的 `bun run start:bg` 和 `bun run stop:bg` 命令继续可用，同时新增 `bun run restart:bg` 和 `bun run status:bg`。
 
 ## 功能
 
@@ -101,12 +111,14 @@ bun run stop:bg
 
 ## 价格与费用估算
 
-Sessions 列表的 Tokens 列会展示按当前模型价格估算的美元成本。计算时会区分：
+Sessions 列表的 Tokens 列会展示按当前模型价格估算的人民币成本。计算时会区分：
 
 - uncached input tokens
 - cached input tokens
 - output tokens
 
 页面顶部提供「同步官方售价」按钮，会从 OpenAI 官方 `https://platform.openai.com/docs/pricing.md` 拉取最新 token 售价并更新内存价格表。刷新失败时保留内置价格表，避免页面不可用。
+
+OpenAI 售价以美元计价，应用统一换算为人民币后展示。默认汇率为 `1 USD = 7.20 CNY`，可在启动服务前通过环境变量 `USD_TO_CNY_RATE` 调整，例如 `USD_TO_CNY_RATE=7.18 bun run start`。页面价格表状态会显示当前使用的换算汇率。
 
 费用仅用于本地估算，具体账单以 OpenAI 官方账单为准。

@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { SessionDetail } from '../lib/types';
-import { formatCompactNumber, formatNumber, formatRateLimitLabel, formatUsd, sumTokens } from '../lib/format';
+import { formatCny, formatCompactNumber, formatNumber, formatRateLimitLabel, sumTokens } from '../lib/format';
 
 export function TokenChart({ session }: { session: SessionDetail }) {
   const data = session.tokenPoints.map((point, index) => ({
@@ -25,12 +25,12 @@ export function TokenChart({ session }: { session: SessionDetail }) {
           ['Reasoning', last.reasoning_output_tokens],
           ['总计', sumTokens(last)],
           ['上下文剩余', session.remainingTokens],
-          ['费用', session.estimatedCostUsd]
+          ['费用', session.estimatedCostCny]
         ].map(([label, value]) => (
           <div key={label} className="rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
             <div className="text-xs text-slate-500">{label}</div>
             <div className="mt-1 text-lg font-semibold" title={value == null ? '' : formatNumber(Number(value))}>
-              {label === '费用' ? formatUsd(value as number | null) : label === '上下文剩余' ? formatCompactNumber(value as number | null) : formatNumber(Number(value || 0))}
+              {label === '费用' ? formatCny(value as number | null) : label === '上下文剩余' ? formatCompactNumber(value as number | null) : formatNumber(Number(value || 0))}
             </div>
           </div>
         ))}

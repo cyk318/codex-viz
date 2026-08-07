@@ -15,7 +15,7 @@ import type {
   TurnGraph
 } from '../lib/types';
 import { excerpt, sumTokens } from '../lib/format';
-import { calcCost } from './pricing';
+import { calcCostCny } from './pricing';
 
 type CallDraft = {
   entryIndex: number;
@@ -272,7 +272,7 @@ function parseEntries(filePath: string, entries: RawEntry[], warnings: ParseWarn
   const remainingTokens = contextWindow == null ? null : Math.max(0, contextWindow - sumTokens(currentWindowTokens));
   const rateLimits = latestUsableRateLimits(tokenPoints);
   const graph = buildGraph([...turns.values()], messages, toolCalls);
-  const estimatedCostUsd = calcCost(model, totalTokens);
+  const estimatedCostCny = calcCostCny(model, totalTokens);
   const summary: SessionSummary = {
     id: sessionId,
     filePath,
@@ -287,7 +287,7 @@ function parseEntries(filePath: string, entries: RawEntry[], warnings: ParseWarn
     contextWindow,
     remainingTokens,
     rateLimits,
-    estimatedCostUsd,
+    estimatedCostCny,
     model,
     cliVersion,
     gitBranch,
