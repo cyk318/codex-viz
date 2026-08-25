@@ -5,6 +5,12 @@ import type { PricingSnapshot, ProjectSummary, SearchResult, SessionSummary } fr
 import { formatCny, formatCompactNumber, formatDate, formatNumber, formatRateLimitLabel, shortPath, sumTokens } from '../lib/format';
 import { UsageBanner } from '../components/UsageBanner';
 
+type CopiedCommand = {
+  sessionId: string;
+  command: string;
+  kind: 'resume' | 'dangerous';
+};
+
 export function SessionList() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -15,7 +21,7 @@ export function SessionList() {
   const [pricingStatus, setPricingStatus] = useState<string>('正在读取价格表...');
   const [refreshingPricing, setRefreshingPricing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
+  const [copiedCommand, setCopiedCommand] = useState<CopiedCommand | null>(null);
   const [deletedTitle, setDeletedTitle] = useState<string | null>(null);
   const [cleaningSessions, setCleaningSessions] = useState(false);
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
@@ -65,15 +71,19 @@ export function SessionList() {
     }
   }
 
-  async function copySessionId(sessionId: string) {
+  async function copyResumeCommand(sessionId: string, dangerous = false) {
+    const command = dangerous
+      ? `codex --dangerously-bypass-approvals-and-sandbox resume ${sessionId}`
+      : `codex resume ${sessionId}`;
     try {
-      await navigator.clipboard.writeText(`codex resume ${sessionId}`);
-      setCopiedSessionId(sessionId);
+      await navigator.clipboard.writeText(command);
+      const copied = { sessionId, command, kind: dangerous ? 'dangerous' as const : 'resume' as const };
+      setCopiedCommand(copied);
       window.setTimeout(() => {
-        setCopiedSessionId((current) => (current === sessionId ? null : current));
+        setCopiedCommand((current) => (current?.command === command ? null : current));
       }, 1200);
     } catch (err) {
-      setError((err as Error).message || '复制 sessionId 失败');
+      setError((err as Error).message || '复制 resume 命令失败');
     }
   }
 
@@ -133,9 +143,9 @@ export function SessionList() {
 
       <section className="min-w-0">
         <UsageBanner sessions={sessions} />
-        {copiedSessionId ? (
+        {copiedCommand ? (
           <div className="mb-3 rounded border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-            已复制，可直接运行：codex resume {copiedSessionId}
+            已复制，可直接运行：{copiedCommand.command}
           </div>
         ) : null}
         {deletedTitle ? (
@@ -195,17 +205,18 @@ export function SessionList() {
           </div>
         ) : null}
 
-        <div className="overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-          <div className="grid grid-cols-[minmax(260px,1fr)_110px_110px_120px_120px_156px] gap-3 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800 max-lg:hidden">
+        <div className="overflow-x-auto rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <div className="grid grid-cols-[minmax(260px,1fr)_80px_80px_100px_90px_120px_230px] gap-3 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800 max-lg:hidden">
             <div>标题</div>
             <div>Turns</div>
             <div>工具</div>
             <div>Tokens</div>
+            <div>上下文</div>
             <div>开始时间</div>
             <div>操作</div>
           </div>
           {filtered.map((session) => (
-            <div key={session.id} className="grid gap-2 border-b border-slate-100 px-3 py-3 text-sm hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 lg:grid-cols-[minmax(260px,1fr)_110px_110px_120px_120px_156px] lg:gap-3">
+            <div key={session.id} className="grid gap-2 border-b border-slate-100 px-3 py-3 text-sm hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 lg:grid-cols-[minmax(260px,1fr)_80px_80px_100px_90px_120px_230px] lg:gap-3">
               <Link to={`/sessions/${session.id}`} className="contents">
                 <div className="min-w-0">
                   <div className="truncate font-medium">{session.title}</div>
@@ -220,16 +231,27 @@ export function SessionList() {
                   <div>{formatCompactNumber(sumTokens(session.totalTokens))}</div>
                   <div className="text-xs text-slate-500">{formatCny(session.estimatedCostCny)}</div>
                 </div>
+                <ContextTag session={session} />
                 <div className="self-center">{formatDate(session.startedAt)}</div>
               </Link>
               <div className="flex items-center gap-2">
                 <button
                   className="h-8 rounded border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:bg-blue-950 dark:hover:text-blue-200"
                   type="button"
-                  onClick={() => copySessionId(session.id)}
-                  title={copiedSessionId === session.id ? '已复制' : `复制 codex resume ${session.id}`}
+                  onClick={() => copyResumeCommand(session.id)}
+                  title={copiedCommand?.sessionId === session.id && copiedCommand.kind === 'resume' ? '已复制' : `复制 codex resume ${session.id}`}
                 >
-                  {copiedSessionId === session.id ? '已复制' : '复制id'}
+                  {copiedCommand?.sessionId === session.id && copiedCommand.kind === 'resume' ? '已复制' : '复制id'}
+                </button>
+                <button
+                  className="h-8 rounded border border-amber-300 px-3 text-xs font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-200 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
+                  type="button"
+                  onClick={() => copyResumeCommand(session.id, true)}
+                  title={copiedCommand?.sessionId === session.id && copiedCommand.kind === 'dangerous'
+                    ? '已复制危险模式 resume 命令'
+                    : `复制 codex --dangerously-bypass-approvals-and-sandbox resume ${session.id}`}
+                >
+                  {copiedCommand?.sessionId === session.id && copiedCommand.kind === 'dangerous' ? '已复制' : '危险id'}
                 </button>
                 <button
                   className="h-8 rounded border border-red-200 px-3 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 dark:border-red-900 dark:text-red-200 dark:hover:border-red-700 dark:hover:bg-red-950/40"
@@ -247,6 +269,32 @@ export function SessionList() {
       </section>
     </main>
   );
+}
+
+function ContextTag({ session }: { session: SessionSummary }) {
+  const usage = contextUsage(session);
+  if (usage == null) return <div className="self-center text-slate-400" title="暂无上下文窗口数据">-</div>;
+
+  const percentage = Math.round(usage * 100);
+  const level = usage <= 0.25
+    ? { label: '低', className: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200' }
+    : usage <= 0.5
+      ? { label: '中', className: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200' }
+      : usage <= 0.75
+        ? { label: '高', className: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200' }
+        : { label: '超高', className: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200' };
+
+  return (
+    <div className="self-center" title={`当前上下文占用 ${percentage}%（剩余 ${formatCompactNumber(session.remainingTokens)} / ${formatCompactNumber(session.contextWindow)} tokens）`}>
+      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${level.className}`}>{level.label}</span>
+      <div className="mt-1 text-xs text-slate-500">{percentage}%</div>
+    </div>
+  );
+}
+
+function contextUsage(session: SessionSummary) {
+  if (session.contextWindow == null || session.contextWindow <= 0 || session.remainingTokens == null) return null;
+  return Math.min(1, Math.max(0, (session.contextWindow - session.remainingTokens) / session.contextWindow));
 }
 
 function formatPricingStatus(snapshot: PricingSnapshot) {
