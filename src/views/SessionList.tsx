@@ -286,8 +286,7 @@ function ContextTag({ session }: { session: SessionSummary }) {
 
   return (
     <div className="self-center" title={`当前上下文占用 ${percentage}%（剩余 ${formatCompactNumber(session.remainingTokens)} / ${formatCompactNumber(session.contextWindow)} tokens）`}>
-      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${level.className}`}>{level.label}</span>
-      <div className="mt-1 text-xs text-slate-500">{percentage}%</div>
+      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${level.className}`}>{percentage}%-{level.label}</span>
     </div>
   );
 }
