@@ -74,6 +74,8 @@ function parseEntries(filePath: string, entries: RawEntry[], warnings: ParseWarn
   const turns = new Map<string, ParsedTurn>();
   const seenTimelineText = new Set<string>();
   let lastTotalUsage: CodexTokenUsage = {};
+  let estimatedCostCny: number | null = 0;
+  let hasUsage = false;
 
   entries.forEach((entry, entryIndex) => {
     const timestamp = entry.timestamp || startedAt;
@@ -154,6 +156,18 @@ function parseEntries(filePath: string, entries: RawEntry[], warnings: ParseWarn
         const info = asRecord(payload.info);
         const total = usageValue(info.total_token_usage) || lastTotalUsage;
         const last = usageValue(info.last_token_usage) || {};
+        if (usageValue(info.total_token_usage)) {
+          const keys = ['input_tokens', 'cached_input_tokens', 'cache_write_input_tokens', 'output_tokens'] as const;
+          const reset = keys.some(key => (total[key] ?? 0) < (lastTotalUsage[key] ?? 0));
+          const delta: CodexTokenUsage = {};
+          for (const key of keys) delta[key] = Math.max(0, (total[key] ?? 0) - (reset ? 0 : lastTotalUsage[key] ?? 0));
+          // Repeated token_count events (e.g. rate-limit updates) add no cost.
+          if (keys.some(key => (delta[key] ?? 0) > 0)) {
+            const cost = calcCostCny(model, delta);
+            estimatedCostCny = estimatedCostCny == null || cost == null ? null : estimatedCostCny + cost;
+          }
+          hasUsage = true;
+        }
         lastTotalUsage = total;
         tokenPoints.push({
           id: `tok-${entryIndex}`,
@@ -272,7 +286,7 @@ function parseEntries(filePath: string, entries: RawEntry[], warnings: ParseWarn
   const remainingTokens = contextWindow == null ? null : Math.max(0, contextWindow - sumTokens(currentWindowTokens));
   const rateLimits = latestUsableRateLimits(tokenPoints);
   const graph = buildGraph([...turns.values()], messages, toolCalls);
-  const estimatedCostCny = calcCostCny(model, totalTokens);
+  if (!hasUsage) estimatedCostCny = null;
   const summary: SessionSummary = {
     id: sessionId,
     filePath,
@@ -401,6 +415,7 @@ function usageValue(value: unknown): CodexTokenUsage | null {
   return {
     input_tokens: numberValue(record.input_tokens) ?? undefined,
     cached_input_tokens: numberValue(record.cached_input_tokens) ?? undefined,
+    cache_write_input_tokens: numberValue(record.cache_write_input_tokens) ?? undefined,
     output_tokens: numberValue(record.output_tokens) ?? undefined,
     reasoning_output_tokens: numberValue(record.reasoning_output_tokens) ?? undefined,
     total_tokens: numberValue(record.total_tokens) ?? sumTokens(record as CodexTokenUsage)

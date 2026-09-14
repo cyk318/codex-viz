@@ -20,6 +20,7 @@ export type ContentBlock =
 export type CodexTokenUsage = {
   input_tokens?: number;
   cached_input_tokens?: number;
+  cache_write_input_tokens?: number;
   output_tokens?: number;
   reasoning_output_tokens?: number;
   total_tokens?: number;
@@ -158,6 +159,8 @@ export type ModelPricing = {
   input: number;
   output: number;
   cached_input?: number;
+  cache_write?: number;
+  long_context?: ModelPricing;
 };
 
 export type PricingSnapshot = {

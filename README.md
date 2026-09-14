@@ -103,6 +103,16 @@ bun run service status
 - `encrypted_content` 不会解密，只展示 reasoning 事件占位或 summary。
 - 页面可见文案默认使用中文，必要专业词汇保留英文。
 
+## 界面与交互
+
+- ORBIT 紫色暗色任务控制台：统一导航、粒子轨道球、今日仪表与项目档案。
+- 任务列表支持项目筛选、全文搜索、分页，以及按时间、Tokens、费用排序。
+- 每行终端按钮复制续接命令；更多菜单提供危险模式命令和删除操作。手机端通过更多菜单访问这些操作。
+- 对话、完整事件流、工具、Tokens、调用图和 Raw 使用统一视觉；会话环境与思考摘要可展开阅读。
+- Raw 每页展示 20 条事件，大段代码按需展开，可下载完整 JSONL。
+- 右上角闪电按钮控制装饰动效；同时遵循系统的“减少动态效果”设置。
+- 图标与轨道视觉均在本地绘制，无外部字体、图片或 3D 资源依赖。
+
 ## 数据安全
 
 - 只读取本机 Codex sessions 目录下的 JSONL 文件。
@@ -111,14 +121,17 @@ bun run service status
 
 ## 价格与费用估算
 
-Sessions 列表的 Tokens 列会展示按当前模型价格估算的人民币成本。计算时会区分：
+Sessions 列表的 Tokens 列会展示按每次请求对应模型的 Standard API 价格估算的人民币成本。计算时会区分：
 
 - uncached input tokens
 - cached input tokens
-- output tokens
+- cache write input tokens（日志提供时）
+- output tokens（已包含 reasoning tokens，不重复计费）
 
-页面顶部提供「同步官方售价」按钮，会从 OpenAI 官方 `https://platform.openai.com/docs/pricing.md` 拉取最新 token 售价并更新内存价格表。刷新失败时保留内置价格表，避免页面不可用。
+按累计用量增量去重并逐请求计价；支持超过 272K 输入的长上下文价格。内置价格核对日期为 2026-09-14，包含 GPT-6 Astra、GPT-5.6 Sol/Terra/Luna。未知型号保留“费用未知”，不套用其他型号价格。
+
+页面顶部提供「同步官方售价」按钮，会从 OpenAI 官方 `https://developers.openai.com/api/docs/pricing.md` 拉取最新 token 售价并更新内存价格表。仅解析 Standard 表，避免混入 Batch/Flex/Fast 价格；刷新失败时保留上次可用价格表和同步时间，避免页面不可用。
 
 OpenAI 售价以美元计价，应用统一换算为人民币后展示。默认汇率为 `1 USD = 7.20 CNY`，可在启动服务前通过环境变量 `USD_TO_CNY_RATE` 调整，例如 `USD_TO_CNY_RATE=7.18 bun run start`。页面价格表状态会显示当前使用的换算汇率。
 
-费用仅用于本地估算，具体账单以 OpenAI 官方账单为准。
+费用为 Standard API 等价估算，不代表 ChatGPT/Codex 订阅实际扣费。当前日志未提供服务档位，未计入 Fast 模式、区域处理附加费或工具调用费；缺少缓存写入字段时按普通输入估算。具体账单以 OpenAI 官方账单为准。

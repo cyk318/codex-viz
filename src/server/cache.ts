@@ -14,8 +14,14 @@ export function clearSessionCache() {
   cache.clear();
 }
 
-export async function parseSessionFile(filePath: string, detail: true): Promise<SessionDetail>;
-export async function parseSessionFile(filePath: string, detail?: false): Promise<SessionSummary>;
+export async function parseSessionFile(
+  filePath: string,
+  detail: true
+): Promise<SessionDetail>;
+export async function parseSessionFile(
+  filePath: string,
+  detail?: false
+): Promise<SessionSummary>;
 export async function parseSessionFile(filePath: string, detail = false) {
   const stat = await Bun.file(filePath).stat();
   const cached = cache.get(filePath);
@@ -26,10 +32,21 @@ export async function parseSessionFile(filePath: string, detail = false) {
 
   if (detail) {
     const parsed = await parseSessionFileUncached(filePath, true);
+    const {
+      entries,
+      messages,
+      reasoning,
+      turns,
+      toolCalls,
+      tokenPoints,
+      graph,
+      parseWarnings,
+      ...summary
+    } = parsed;
     cache.set(filePath, {
       mtimeMs: stat.mtimeMs,
       size: stat.size,
-      summary: parsed,
+      summary,
       detail: parsed
     });
     return parsed;

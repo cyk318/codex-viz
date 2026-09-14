@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
-import type { PricingSnapshot, ProjectSummary, SearchResult, SessionSummary } from '../lib/types';
-import { formatCny, formatCompactNumber, formatDate, formatNumber, formatRateLimitLabel, shortPath, sumTokens } from '../lib/format';
+import type {
+  PricingSnapshot,
+  ProjectSummary,
+  SearchResult,
+  SessionSummary
+} from '../lib/types';
+import {
+  formatCny,
+  formatCompactNumber,
+  formatDate,
+  formatNumber,
+  formatRateLimitLabel,
+  shortPath,
+  sumTokens
+} from '../lib/format';
+import { Icon } from '../components/Icon';
 import { UsageBanner } from '../components/UsageBanner';
 
 type CopiedCommand = {
@@ -16,23 +30,51 @@ export function SessionList() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [project, setProject] = useState<string>('all');
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState('recent');
+  const [page, setPage] = useState(1);
+  const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [pricingStatus, setPricingStatus] = useState<string>('正在读取价格表...');
+  const [pricingStatus, setPricingStatus] =
+    useState<string>('正在读取价格表...');
   const [refreshingPricing, setRefreshingPricing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [copiedCommand, setCopiedCommand] = useState<CopiedCommand | null>(null);
+  const [copiedCommand, setCopiedCommand] = useState<CopiedCommand | null>(
+    null
+  );
   const [deletedTitle, setDeletedTitle] = useState<string | null>(null);
   const [cleaningSessions, setCleaningSessions] = useState(false);
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    const closeMenus = (event: Event) => {
+      document
+        .querySelectorAll<HTMLDetailsElement>('.action-menu[open]')
+        .forEach((menu) => {
+          if (
+            event instanceof KeyboardEvent
+              ? event.key === 'Escape'
+              : !menu.contains(event.target as Node)
+          )
+            menu.open = false;
+        });
+    };
+    document.addEventListener('pointerdown', closeMenus);
+    document.addEventListener('keydown', closeMenus);
+    return () => {
+      document.removeEventListener('pointerdown', closeMenus);
+      document.removeEventListener('keydown', closeMenus);
+    };
+  }, []);
+
   function loadData() {
-    return Promise.all([api.sessions(), api.projects(), api.pricing()])
-      .then(([sessionData, projectData, pricing]) => {
+    return Promise.all([api.sessions(), api.projects(), api.pricing()]).then(
+      ([sessionData, projectData, pricing]) => {
         setSessions(sessionData);
         setProjects(projectData);
         setPricingStatus(formatPricingStatus(pricing));
-      });
+      }
+    );
   }
 
   useEffect(() => {
@@ -42,19 +84,48 @@ export function SessionList() {
   }, []);
 
   useEffect(() => {
+    let stale = false;
+    setSearchResults([]);
+    setSearching(Boolean(query.trim()));
     const id = window.setTimeout(() => {
-      if (!query.trim()) {
-        setSearchResults([]);
-        return;
-      }
-      api.search(query).then(setSearchResults).catch((err) => setError(err.message));
-    }, 250);
-    return () => window.clearTimeout(id);
+      if (!query.trim()) return;
+      api
+        .search(query)
+        .then((results) => {
+          if (!stale) setSearchResults(results);
+        })
+        .catch((err) => {
+          if (!stale) setError(err.message);
+        })
+        .finally(() => {
+          if (!stale) setSearching(false);
+        });
+    }, 300);
+    return () => {
+      stale = true;
+      window.clearTimeout(id);
+    };
   }, [query]);
 
-  const filtered = useMemo(() => (
-    project === 'all' ? sessions : sessions.filter((session) => session.cwd === project)
-  ), [project, sessions]);
+  useEffect(() => {
+    setPage(1);
+  }, [project, sort]);
+  const filtered = useMemo(() => {
+    const items =
+      project === 'all'
+        ? [...sessions]
+        : sessions.filter((session) => session.cwd === project);
+    return items.sort((a, b) =>
+      sort === 'tokens'
+        ? sumTokens(b.totalTokens) - sumTokens(a.totalTokens)
+        : sort === 'cost'
+          ? (b.estimatedCostCny ?? -1) - (a.estimatedCostCny ?? -1)
+          : b.startedAt.localeCompare(a.startedAt)
+    );
+  }, [project, sessions, sort]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / 20));
+  const currentPage = Math.min(page, pageCount);
+  const visible = filtered.slice((currentPage - 1) * 20, currentPage * 20);
 
   async function refreshPricing() {
     setRefreshingPricing(true);
@@ -77,10 +148,16 @@ export function SessionList() {
       : `codex resume ${sessionId}`;
     try {
       await navigator.clipboard.writeText(command);
-      const copied = { sessionId, command, kind: dangerous ? 'dangerous' as const : 'resume' as const };
+      const copied = {
+        sessionId,
+        command,
+        kind: dangerous ? ('dangerous' as const) : ('resume' as const)
+      };
       setCopiedCommand(copied);
       window.setTimeout(() => {
-        setCopiedCommand((current) => (current?.command === command ? null : current));
+        setCopiedCommand((current) =>
+          current?.command === command ? null : current
+        );
       }, 1200);
     } catch (err) {
       setError((err as Error).message || '复制 resume 命令失败');
@@ -88,16 +165,22 @@ export function SessionList() {
   }
 
   async function deleteSession(session: SessionSummary) {
-    const confirmed = window.confirm(`确定要删除这个 session 吗？\n\n${session.title}\n${session.id}\n\n删除后将移除本地 JSONL 文件，无法在此页面恢复。`);
+    const confirmed = window.confirm(
+      `确定要删除这个 session 吗？\n\n${session.title}\n${session.id}\n\n删除后将移除本地 JSONL 文件，无法在此页面恢复。`
+    );
     if (!confirmed) return;
     setError(null);
     try {
       await api.deleteSession(session.id);
       setDeletedTitle(session.title);
-      setSearchResults((results) => results.filter((result) => result.sessionId !== session.id));
+      setSearchResults((results) =>
+        results.filter((result) => result.sessionId !== session.id)
+      );
       await loadData();
       window.setTimeout(() => {
-        setDeletedTitle((current) => (current === session.title ? null : current));
+        setDeletedTitle((current) =>
+          current === session.title ? null : current
+        );
       }, 2000);
     } catch (err) {
       setError((err as Error).message || '删除 session 失败');
@@ -105,7 +188,9 @@ export function SessionList() {
   }
 
   async function cleanupExpiredSessions() {
-    const confirmed = window.confirm('确定要清理 30 天以前的 sessions 吗？\n\n将永久删除这些 session 的本地 JSONL 文件，无法在此页面恢复。');
+    const confirmed = window.confirm(
+      '确定要清理 30 天以前的 sessions 吗？\n\n将永久删除这些 session 的本地 JSONL 文件，无法在此页面恢复。'
+    );
     if (!confirmed) return;
     setCleaningSessions(true);
     setCleanupMessage(null);
@@ -114,9 +199,11 @@ export function SessionList() {
       const result = await api.cleanupSessions();
       setSearchResults([]);
       await loadData();
-      setCleanupMessage(result.deletedCount > 0
-        ? `已清理 ${result.deletedCount} 个 30 天以前的 sessions。`
-        : '没有需要清理的 session。');
+      setCleanupMessage(
+        result.deletedCount > 0
+          ? `已清理 ${result.deletedCount} 个 30 天以前的 sessions。`
+          : '没有需要清理的 session。'
+      );
     } catch (err) {
       setError((err as Error).message || '清理 sessions 失败');
     } finally {
@@ -125,180 +212,402 @@ export function SessionList() {
   }
 
   return (
-    <main className="mx-auto grid max-w-[1500px] gap-4 px-4 py-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-200 p-3 text-sm font-semibold dark:border-slate-800">项目</div>
-        <button className={`block w-full px-3 py-2 text-left text-sm ${project === 'all' ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200' : ''}`} onClick={() => setProject('all')}>
-          全部 sessions · {sessions.length}
-        </button>
-        <div className="max-h-[calc(100vh-170px)] overflow-auto">
-          {projects.map((item) => (
-            <button key={item.id} className={`block w-full border-t border-slate-100 px-3 py-2 text-left text-sm dark:border-slate-800 ${project === item.cwd ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200' : ''}`} onClick={() => setProject(item.cwd)}>
-              <div className="truncate font-medium">{shortPath(item.cwd)}</div>
-              <div className="text-xs text-slate-500">{item.sessionCount} 个 sessions · {formatNumber(item.totalTokens)} tokens</div>
-            </button>
-          ))}
+    <main className="workspace-page">
+      <UsageBanner sessions={sessions} />
+      <div className="section-heading">
+        <div>
+          <div className="eyebrow">THE ARCHIVE</div>
+          <h2>
+            任务档案 <span>{sessions.length.toString().padStart(2, '0')}</span>
+          </h2>
         </div>
-      </aside>
-
-      <section className="min-w-0">
-        <UsageBanner sessions={sessions} />
-        {copiedCommand ? (
-          <div className="mb-3 rounded border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-            已复制，可直接运行：{copiedCommand.command}
-          </div>
-        ) : null}
-        {deletedTitle ? (
-          <div className="mb-3 rounded border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-            已删除 session：{deletedTitle}
-          </div>
-        ) : null}
-        {cleanupMessage ? (
-          <div className="mb-3 rounded border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-            {cleanupMessage}
-          </div>
-        ) : null}
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">Sessions</h1>
-            <p className="text-sm text-slate-500">{loading ? '正在加载本地 JSONL 文件...' : `${filtered.length} 个 sessions`}</p>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <button
-              className="h-10 rounded border border-red-200 px-4 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900 dark:text-red-200 dark:hover:border-red-700 dark:hover:bg-red-950/40"
-              disabled={cleaningSessions}
-              onClick={cleanupExpiredSessions}
-              title="永久删除最后活动时间早于 30 天前的本地 session JSONL 文件"
-            >
-              {cleaningSessions ? '清理中...' : '清理 30 天前 sessions'}
-            </button>
-            <button
-              className="h-10 rounded bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 hover:shadow disabled:cursor-not-allowed disabled:bg-blue-400 disabled:shadow-none dark:bg-blue-500 dark:hover:bg-blue-400"
-              disabled={refreshingPricing}
-              onClick={refreshPricing}
-              title="从 OpenAI 官方 pricing 页面同步最新 token 售价，并重新计算费用估算"
-            >
-              {refreshingPricing ? '同步中...' : '同步官方售价'}
-            </button>
-            <input
-              className="h-10 w-full rounded border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-600 dark:border-slate-700 dark:bg-slate-900 sm:w-80"
-              placeholder="搜索消息、命令、patch"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+        <div className="archive-actions">
+          <button
+            className="button button-quiet"
+            disabled={cleaningSessions}
+            onClick={cleanupExpiredSessions}
+            title="永久删除 30 天前的本地记录"
+          >
+            <Icon name="trash" size={15} />
+            {cleaningSessions ? '清理中' : '清理旧记录'}
+          </button>
+          <button
+            className="button button-outline"
+            disabled={refreshingPricing}
+            onClick={refreshPricing}
+          >
+            <Icon
+              name="refresh"
+              size={15}
+              className={refreshingPricing ? 'spin' : ''}
             />
-          </div>
+            {refreshingPricing ? '同步中' : '同步官方售价'}
+          </button>
         </div>
-        <div className="mb-3 text-xs text-slate-500">费用估算使用：{pricingStatus}</div>
-
-        {error ? <div className="mb-3 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">{error}</div> : null}
-
-        {searchResults.length ? (
-          <div className="mb-4 rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-            <div className="border-b border-slate-200 p-3 text-sm font-semibold dark:border-slate-800">搜索结果</div>
-            {searchResults.map((result) => (
-              <Link key={result.sessionId} to={`/sessions/${result.sessionId}`} className="block border-t border-slate-100 p-3 text-sm hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800">
-                <div className="font-medium">{result.title}</div>
-                <div className="text-xs text-slate-500">{shortPath(result.cwd)} · {formatDate(result.startedAt)}</div>
-                <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">{result.matches[0]?.excerpt}</div>
-              </Link>
+      </div>
+      <div aria-live="polite" className="notification-area">
+        {copiedCommand && (
+          <div className="notice success">
+            <Icon name="check" /> 已复制续接命令{' '}
+            <code>{copiedCommand.command}</code>
+          </div>
+        )}
+        {deletedTitle && <div className="notice">已删除：{deletedTitle}</div>}
+        {cleanupMessage && <div className="notice">{cleanupMessage}</div>}
+        {error && (
+          <div className="notice error" role="alert">
+            {error}
+            <button
+              className="icon-button"
+              aria-label="关闭提示"
+              onClick={() => setError(null)}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="archive-layout">
+        <aside className="project-panel">
+          <div className="project-heading">
+            项目空间 <span>{projects.length}</span>
+          </div>
+          <button
+            className={`project-item ${project === 'all' ? 'selected' : ''}`}
+            onClick={() => setProject('all')}
+          >
+            <Icon name="grid" size={16} />
+            <span>全部任务</span>
+            <b>{sessions.length}</b>
+          </button>
+          <div className="project-list">
+            {projects.map((item) => (
+              <button
+                key={item.id}
+                className={`project-item ${project === item.cwd ? 'selected' : ''}`}
+                onClick={() => setProject(item.cwd)}
+                title={item.cwd}
+              >
+                <Icon name="folder" size={16} />
+                <span>{shortPath(item.cwd).split('/').pop()}</span>
+                <b>{item.sessionCount}</b>
+              </button>
             ))}
           </div>
-        ) : null}
-
-        <div className="overflow-x-auto rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-          <div className="grid grid-cols-[minmax(260px,1fr)_80px_80px_100px_90px_120px_230px] gap-3 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 dark:border-slate-800 max-lg:hidden">
-            <div>标题</div>
-            <div>Turns</div>
-            <div>工具</div>
-            <div>Tokens</div>
-            <div>上下文</div>
-            <div>开始时间</div>
-            <div>操作</div>
+          <div className="project-foot">
+            <Icon name="terminal" size={17} />
+            <span>
+              灵感在这里
+              <br />
+              <strong>成为现实。</strong>
+            </span>
           </div>
-          {filtered.map((session) => (
-            <div key={session.id} className="grid gap-2 border-b border-slate-100 px-3 py-3 text-sm hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800 lg:grid-cols-[minmax(260px,1fr)_80px_80px_100px_90px_120px_230px] lg:gap-3">
-              <Link to={`/sessions/${session.id}`} className="contents">
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{session.title}</div>
-                  <div className="truncate text-xs text-slate-500">{shortPath(session.cwd)} · {session.model || '-'} · {session.gitBranch || '-'}</div>
-                  <div className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-                    {formatRateLimitLabel(session.rateLimits)}
-                  </div>
-                </div>
-                <div className="self-center">{session.turnCount}</div>
-                <div className="self-center">{session.toolCallCount}</div>
-                <div className="self-center" title={`${formatNumber(sumTokens(session.totalTokens))} tokens，预估 ${formatCny(session.estimatedCostCny)}`}>
-                  <div>{formatCompactNumber(sumTokens(session.totalTokens))}</div>
-                  <div className="text-xs text-slate-500">{formatCny(session.estimatedCostCny)}</div>
-                </div>
-                <ContextTag session={session} />
-                <div className="self-center">{formatDate(session.startedAt)}</div>
-              </Link>
-              <div className="flex items-center gap-2">
+        </aside>
+        <section className="archive-main" aria-label="任务列表">
+          <div className="list-toolbar">
+            <label className="search-box">
+              <Icon name="search" size={17} />
+              <input
+                aria-label="搜索任务内容"
+                placeholder="搜索消息、命令或代码…"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              {query ? (
                 <button
-                  className="h-8 rounded border border-slate-300 px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:bg-blue-950 dark:hover:text-blue-200"
-                  type="button"
-                  onClick={() => copyResumeCommand(session.id)}
-                  title={copiedCommand?.sessionId === session.id && copiedCommand.kind === 'resume' ? '已复制' : `复制 codex resume ${session.id}`}
+                  className="icon-button"
+                  onClick={() => setQuery('')}
+                  aria-label="清空搜索"
                 >
-                  {copiedCommand?.sessionId === session.id && copiedCommand.kind === 'resume' ? '已复制' : '复制id'}
+                  <Icon name="close" size={14} />
                 </button>
-                <button
-                  className="h-8 rounded border border-amber-300 px-3 text-xs font-semibold text-amber-800 transition hover:border-amber-400 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-200 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
-                  type="button"
-                  onClick={() => copyResumeCommand(session.id, true)}
-                  title={copiedCommand?.sessionId === session.id && copiedCommand.kind === 'dangerous'
-                    ? '已复制危险模式 resume 命令'
-                    : `复制 codex --dangerously-bypass-approvals-and-sandbox resume ${session.id}`}
-                >
-                  {copiedCommand?.sessionId === session.id && copiedCommand.kind === 'dangerous' ? '已复制' : '危险id'}
-                </button>
-                <button
-                  className="h-8 rounded border border-red-200 px-3 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 dark:border-red-900 dark:text-red-200 dark:hover:border-red-700 dark:hover:bg-red-950/40"
-                  type="button"
-                  onClick={() => deleteSession(session)}
-                  title={`删除 ${session.id}`}
-                >
-                  删除
-                </button>
+              ) : (
+                <span className="search-hint">全文搜索</span>
+              )}
+            </label>
+            <select
+              className="sort-select"
+              aria-label="任务排序"
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+            >
+              <option value="recent">最近创建</option>
+              <option value="tokens">Token 用量</option>
+              <option value="cost">预估费用</option>
+            </select>
+          </div>
+          {query.trim() ? (
+            <div className="search-results">
+              <div className="result-label">
+                {searching
+                  ? '正在搜索全部任务…'
+                  : `${searchResults.length} 个匹配任务`}
               </div>
+              {searchResults.map((result) => (
+                <Link
+                  key={result.sessionId}
+                  to={`/sessions/${result.sessionId}`}
+                  className="search-result"
+                >
+                  <Icon name="search" />
+                  <div>
+                    <h3>{result.title}</h3>
+                    <p>{result.matches[0]?.excerpt}</p>
+                    <small>
+                      {shortPath(result.cwd)} · {formatDate(result.startedAt)}
+                    </small>
+                  </div>
+                  <Icon name="arrow" />
+                </Link>
+              ))}
+              {!searching && !searchResults.length && (
+                <div className="empty-state">
+                  <Icon name="search" size={32} />
+                  <h3>没有找到这段轨迹</h3>
+                  <p>试试其他消息、工具名称或命令。</p>
+                </div>
+              )}
             </div>
-          ))}
-          {!loading && filtered.length === 0 ? <div className="p-8 text-center text-sm text-slate-500">没有找到 sessions。</div> : null}
-        </div>
-      </section>
+          ) : (
+            <>
+              <div className="session-table-head">
+                <span>任务 / SESSION</span>
+                <span>用量 / TOKENS</span>
+                <span>上下文</span>
+                <span>创建时间</span>
+                <span />
+              </div>
+              {loading ? (
+                <div className="skeleton-list" aria-label="正在加载任务">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div className="skeleton" key={i} />
+                  ))}
+                </div>
+              ) : (
+                visible.map((session, index) => (
+                  <article
+                    key={session.id}
+                    className="session-row"
+                    style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }}
+                  >
+                    <div className="session-identity">
+                      <span
+                        className={`session-glyph ${session.hasErrors ? 'amber' : ''}`}
+                      >
+                        <Icon
+                          name={session.hasPatch ? 'code' : 'message'}
+                          size={18}
+                        />
+                      </span>
+                      <div className="session-name">
+                        <Link
+                          to={`/sessions/${session.id}`}
+                          className="session-title"
+                          title={session.title}
+                        >
+                          {session.title}
+                        </Link>
+                        <div className="session-meta">
+                          <span
+                            className={`model-dot ${session.model?.includes('astra') ? 'astra' : ''}`}
+                          />
+                          <span>{session.model || '未知模型'}</span>
+                          <span className="meta-separator">/</span>
+                          <span title={session.cwd}>
+                            {shortPath(session.cwd).split('/').pop()}
+                          </span>
+                          <span className="turn-count">
+                            {session.turnCount} 轮 · {session.toolCallCount}{' '}
+                            工具
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <Link
+                      to={`/sessions/${session.id}?tab=tokens`}
+                      className="token-cell"
+                      title={formatRateLimitLabel(session.rateLimits)}
+                    >
+                      <strong>
+                        {formatCompactNumber(sumTokens(session.totalTokens))}
+                      </strong>
+                      <small>{formatCny(session.estimatedCostCny)}</small>
+                    </Link>
+                    <ContextTag session={session} />
+                    <div className="date-cell">
+                      <span>
+                        {new Date(session.startedAt).toLocaleDateString(
+                          'zh-CN',
+                          { month: '2-digit', day: '2-digit' }
+                        )}
+                      </span>
+                      <small>
+                        {new Date(session.startedAt).toLocaleTimeString(
+                          'zh-CN',
+                          { hour: '2-digit', minute: '2-digit', hour12: false }
+                        )}
+                      </small>
+                    </div>
+                    <div className="row-actions">
+                      <button
+                        className="icon-button resume-button"
+                        onClick={() => copyResumeCommand(session.id)}
+                        aria-label={`复制续接命令：${session.title}`}
+                        title="复制 codex resume 命令"
+                      >
+                        <Icon
+                          name={
+                            copiedCommand?.sessionId === session.id
+                              ? 'check'
+                              : 'terminal'
+                          }
+                          size={16}
+                        />
+                      </button>
+                      <details className="action-menu">
+                        <summary
+                          className="icon-button"
+                          aria-label={`更多操作：${session.title}`}
+                          title="更多操作"
+                        >
+                          <Icon name="more" size={17} />
+                        </summary>
+                        <div className="action-dropdown">
+                          <button
+                            onClick={(event) => {
+                              void copyResumeCommand(session.id);
+                              event.currentTarget
+                                .closest('details')
+                                ?.removeAttribute('open');
+                            }}
+                          >
+                            <Icon name="terminal" size={14} />
+                            复制续接命令
+                          </button>
+                          <button
+                            onClick={(event) => {
+                              void copyResumeCommand(session.id, true);
+                              event.currentTarget
+                                .closest('details')
+                                ?.removeAttribute('open');
+                            }}
+                          >
+                            <Icon name="bolt" size={14} />
+                            复制危险模式命令
+                          </button>
+                          <button
+                            className="danger-text"
+                            onClick={(event) => {
+                              event.currentTarget
+                                .closest('details')
+                                ?.removeAttribute('open');
+                              void deleteSession(session);
+                            }}
+                          >
+                            <Icon name="trash" size={14} />
+                            删除本地记录
+                          </button>
+                        </div>
+                      </details>
+                    </div>
+                  </article>
+                ))
+              )}
+              {!loading && !filtered.length && (
+                <div className="empty-state">
+                  <Icon name="orbit" size={36} />
+                  <h3>下一次探索，从这里开始</h3>
+                  <p>这个项目还没有任务记录。</p>
+                </div>
+              )}
+              <div className="list-pagination">
+                <span>
+                  共 {filtered.length} 个任务{' '}
+                  <span className="pagination-muted">/ 每页 20 条</span>
+                </span>
+                <div>
+                  <button
+                    className="icon-button"
+                    aria-label="上一页"
+                    disabled={currentPage <= 1}
+                    onClick={() => setPage(currentPage - 1)}
+                  >
+                    <Icon name="back" size={16} />
+                  </button>
+                  <span>
+                    {currentPage} <em>/ {pageCount}</em>
+                  </span>
+                  <button
+                    className="icon-button"
+                    aria-label="下一页"
+                    disabled={currentPage >= pageCount}
+                    onClick={() => setPage(currentPage + 1)}
+                  >
+                    <Icon name="arrow" size={16} />
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+      <div className="pricing-footnote">
+        <Icon name="shield" size={13} />
+        <span>{pricingStatus} · Standard API 等价估算，非订阅实际扣费</span>
+      </div>
     </main>
   );
 }
 
 function ContextTag({ session }: { session: SessionSummary }) {
   const usage = contextUsage(session);
-  if (usage == null) return <div className="self-center text-slate-400" title="暂无上下文窗口数据">-</div>;
-
+  if (usage == null)
+    return (
+      <div className="context-cell">
+        <span>—</span>
+        <small>暂无记录</small>
+      </div>
+    );
   const percentage = Math.round(usage * 100);
-  const level = usage <= 0.25
-    ? { label: '低', className: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200' }
-    : usage <= 0.5
-      ? { label: '中', className: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200' }
-      : usage <= 0.75
-        ? { label: '高', className: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200' }
-        : { label: '超高', className: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200' };
-
   return (
-    <div className="self-center" title={`当前上下文占用 ${percentage}%（剩余 ${formatCompactNumber(session.remainingTokens)} / ${formatCompactNumber(session.contextWindow)} tokens）`}>
-      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${level.className}`}>{percentage}%-{level.label}</span>
+    <div
+      className={`context-cell ${percentage > 75 ? 'high' : ''}`}
+      title={`上下文占用 ${percentage}%，剩余 ${formatCompactNumber(session.remainingTokens)} tokens`}
+    >
+      <span>
+        {percentage}
+        <small>%</small>
+      </span>
+      <div className="context-meter">
+        <i style={{ width: `${percentage}%` }} />
+      </div>
     </div>
   );
 }
 
 function contextUsage(session: SessionSummary) {
-  if (session.contextWindow == null || session.contextWindow <= 0 || session.remainingTokens == null) return null;
-  return Math.min(1, Math.max(0, (session.contextWindow - session.remainingTokens) / session.contextWindow));
+  if (
+    session.contextWindow == null ||
+    session.contextWindow <= 0 ||
+    session.remainingTokens == null
+  )
+    return null;
+  return Math.min(
+    1,
+    Math.max(
+      0,
+      (session.contextWindow - session.remainingTokens) / session.contextWindow
+    )
+  );
 }
 
 function formatPricingStatus(snapshot: PricingSnapshot) {
   const source = snapshot.source === 'official' ? '官方价格表' : '内置价格表';
-  const updatedAt = snapshot.updatedAt ? ` ${new Date(snapshot.updatedAt).toLocaleTimeString()}` : '';
-  const warnings = snapshot.warnings.length ? ` · ${snapshot.warnings.length} 条警告` : '';
+  const updatedAt = snapshot.updatedAt
+    ? ` ${new Date(snapshot.updatedAt).toLocaleTimeString()}`
+    : '';
+  const warnings = snapshot.warnings.length
+    ? ` · ${snapshot.warnings.length} 条警告`
+    : '';
   return `${source}${updatedAt} · 1 USD = ¥${snapshot.usdToCnyRate.toFixed(2)}${warnings}`;
 }
