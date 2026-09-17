@@ -1960,6 +1960,21 @@ a {
   flex-shrink: 1;
 }
 
+.session-remaining-usage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 7px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.session-remaining-usage > span:last-child {
+  color: #b29fc9;
+  font-variant-numeric: tabular-nums;
+}
+
 .model-dot {
   width: 4px;
   height: 4px;

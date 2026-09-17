@@ -11,7 +11,6 @@ import {
   formatCny,
   formatCompactNumber,
   formatDate,
-  formatNumber,
   formatRateLimitLabel,
   shortPath,
   sumTokens
@@ -356,6 +355,9 @@ export function SessionList() {
                     <small>
                       {shortPath(result.cwd)} · {formatDate(result.startedAt)}
                     </small>
+                    <SessionRemainingUsage
+                      rateLimits={sessions.find((session) => session.id === result.sessionId)?.rateLimits}
+                    />
                   </div>
                   <Icon name="arrow" />
                 </Link>
@@ -421,6 +423,7 @@ export function SessionList() {
                             工具
                           </span>
                         </div>
+                        <SessionRemainingUsage rateLimits={session.rateLimits} />
                       </div>
                     </div>
                     <Link
@@ -556,6 +559,23 @@ export function SessionList() {
         <span>{pricingStatus} · Standard API 等价估算，非订阅实际扣费</span>
       </div>
     </main>
+  );
+}
+
+function SessionRemainingUsage({
+  rateLimits
+}: {
+  rateLimits: SessionSummary['rateLimits'] | undefined;
+}) {
+  const label = formatRateLimitLabel(rateLimits);
+  return (
+    <div
+      className="session-remaining-usage"
+      title="此 session 最后一次有效记录的剩余额度"
+    >
+      <span>最后剩余额度</span>
+      <span>{label === '-' ? '暂无记录' : label}</span>
+    </div>
   );
 }
 
